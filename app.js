@@ -21,10 +21,10 @@ const STROKE_CARD_PADDING_MM = 4;
 const KAI_FONT_FACE = "KaiTi";
 
 const FONT_OPTIONS = {
-  kaiti: { label: "楷体", stack: '"Kaiti SC", STKaiti, KaiTi, "AR PL UKai CN", "Noto Serif CJK SC", serif' },
-  songti: { label: "宋体", stack: '"Songti SC", STSong, SimSun, "Noto Serif CJK SC", serif' },
-  heiti: { label: "黑体", stack: '"Heiti SC", STHeiti, "Microsoft YaHei", "Noto Sans CJK SC", sans-serif' },
-  fangsong: { label: "仿宋", stack: '"FangSong", STFangsong, "FangSong_GB2312", serif' },
+  kaiti: { label: "楷体", stack: "'Kaiti SC', STKaiti, KaiTi, 'AR PL UKai CN', 'Noto Serif CJK SC', serif" },
+  songti: { label: "宋体", stack: "'Songti SC', STSong, SimSun, 'Noto Serif CJK SC', serif" },
+  heiti: { label: "黑体", stack: "'Heiti SC', STHeiti, 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif" },
+  fangsong: { label: "仿宋", stack: "'FangSong', STFangsong, 'FangSong_GB2312', serif" },
 };
 
 const FONT_LABELS = Object.fromEntries(Object.entries(FONT_OPTIONS).map(([k, v]) => [k, v.label]));
@@ -1214,6 +1214,8 @@ function updateOutputs() {
   document.querySelector("#traceOpacityOutput").value = `${Math.round(settings.traceOpacity * 100)}%`;
   document.querySelector("#traceScaleOutput").value = `${Math.round(settings.traceScale * 100)}%`;
   document.querySelector("#zoomOutput").value = `${settings.zoom}%`;
+  const fontPreview = document.querySelector(".font-preview-box");
+  if (fontPreview) fontPreview.style.fontFamily = resolvedKaiFont();
   updateSteppers();
 }
 
