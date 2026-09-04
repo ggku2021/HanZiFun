@@ -408,6 +408,31 @@ textarea:focus-visible {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.font-label-cell {
+  display: grid;
+  gap: 1px;
+  line-height: 1.2;
+}
+
+.font-label-cell small {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.2;
+  font-family: "Kaiti SC", STKaiti, KaiTi, serif;
+}
+
+.font-select-segmented [data-font="songti"] small {
+  font-family: "Songti SC", STSong, SimSun, serif;
+}
+
+.font-select-segmented [data-font="heiti"] small {
+  font-family: "Heiti SC", STHeiti, "Microsoft YaHei", sans-serif;
+}
+
+.font-select-segmented [data-font="fangsong"] small {
+  font-family: "FangSong", STFangsong, serif;
+}
+
 .grid-color-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
