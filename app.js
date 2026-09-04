@@ -75,6 +75,7 @@ const DEFAULT_SETTINGS = {
   gridDiagonalColor: "#d8c6c6",
   zoom: 70,
   fontFamily: "kaiti",
+  useFontForPractice: false,
 };
 
 const NUMBER_FIELDS = new Set([
@@ -226,6 +227,7 @@ function loadSettings() {
       }
       if (Number(stored.settingsVersion) < 9) {
         migrated.fontFamily = DEFAULT_SETTINGS.fontFamily;
+        migrated.useFontForPractice = DEFAULT_SETTINGS.useFontForPractice;
       }
       return { ...DEFAULT_SETTINGS, ...migrated, settingsVersion: SETTINGS_VERSION };
     }
@@ -383,6 +385,18 @@ function makeCharacterSvg(character, options = {}) {
   const grid = makeGrid(options.gridStyle || gridStyle(), options);
   if (options.blank) {
     return `<svg class="hanzi-cell" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" role="img" aria-label="空白练习格">${grid}</svg>`;
+  }
+  // Font-based rendering mode: render characters as text glyphs using the selected font
+  if (settings.useFontForPractice && character && (options.trace || options.guide || options.applyTraceScale || !data)) {
+    const opacity = options.trace ? settings.traceOpacity : 1;
+    const colorStyle = options.trace ? ` style="--trace-color:${settingColor("traceColor")}"` : "";
+    const glyphClass = options.trace ? "font-practice-glyph trace-glyph" : "font-practice-glyph";
+    const traceScale = (options.trace || options.applyTraceScale) && settings.template !== "stroke" ? (settings.traceScale ?? 1) : 1;
+    const textTransform = traceScale !== 1 ? ` transform="translate(512 512) scale(${traceScale}) translate(-512 -512)"` : "";
+    const dataAttrs = [];
+    if (options.applyTraceScale) dataAttrs.push('data-trace-scale="1"');
+    if (options.guide) dataAttrs.push('data-guide="1"');
+    return `<svg class="hanzi-cell${data ? '' : ' pending-cell'}" ${dataAttrs.join(' ')} viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" role="img" aria-label="${escapeHtml(character)} 字练习格">${grid}<text class="${glyphClass}" x="512" y="512" opacity="${opacity}"${colorStyle}${textTransform}>${escapeHtml(character)}</text></svg>`;
   }
   if (!data) {
     const opacity = options.trace ? settings.traceOpacity : 1;

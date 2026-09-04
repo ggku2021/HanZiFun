@@ -433,6 +433,30 @@ textarea:focus-visible {
   font-family: "FangSong", STFangsong, serif;
 }
 
+.font-preview-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #41515c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.font-preview-box {
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--ink);
+  font-family: var(--kai-font);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  line-height: 1.2;
+}
+
 .grid-color-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -972,7 +996,8 @@ svg .order-label {
 }
 
 svg .fallback-glyph,
-svg .copy-glyph {
+svg .copy-glyph,
+svg .font-practice-glyph {
   fill: var(--stroke-active);
   font-family: var(--kai-font);
   font-size: 850px;
