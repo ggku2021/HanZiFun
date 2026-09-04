@@ -1,7 +1,7 @@
 "use strict";
 (function () {
 const SETTINGS_KEY = "hanzifun.settings";
-const SETTINGS_VERSION = 9;
+const SETTINGS_VERSION = 10;
 const APP_TITLE = "汉字 Fun";
 const CSS_PX_PER_MM = 96 / 25.4;
 const VIEWBOX_SIZE = 1024;
@@ -75,7 +75,7 @@ const DEFAULT_SETTINGS = {
   gridDiagonalColor: "#d8c6c6",
   zoom: 70,
   fontFamily: "kaiti",
-  useFontForPractice: false,
+  useFontForPractice: true,
 };
 
 const NUMBER_FIELDS = new Set([
@@ -227,8 +227,9 @@ function loadSettings() {
       }
       if (Number(stored.settingsVersion) < 9) {
         migrated.fontFamily = DEFAULT_SETTINGS.fontFamily;
-        migrated.useFontForPractice = DEFAULT_SETTINGS.useFontForPractice;
       }
+      // Force enable font rendering for all existing users
+      migrated.useFontForPractice = true;
       return { ...DEFAULT_SETTINGS, ...migrated, settingsVersion: SETTINGS_VERSION };
     }
   } catch {
@@ -387,7 +388,7 @@ function makeCharacterSvg(character, options = {}) {
     return `<svg class="hanzi-cell" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" role="img" aria-label="空白练习格">${grid}</svg>`;
   }
   // Font-based rendering mode: render characters as text glyphs using the selected font
-  if (settings.useFontForPractice && character && (options.trace || options.guide || options.applyTraceScale || !data)) {
+  if (settings.useFontForPractice && character && ((options.trace && settings.template !== "stroke") || options.guide || options.applyTraceScale || (options.mode === "step" && settings.template === "stroke") || !data)) {
     const opacity = options.trace ? settings.traceOpacity : 1;
     const colorStyle = options.trace ? ` style="--trace-color:${settingColor("traceColor")}"` : "";
     const glyphClass = options.trace ? "font-practice-glyph trace-glyph" : "font-practice-glyph";
