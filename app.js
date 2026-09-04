@@ -1,7 +1,7 @@
 "use strict";
 (function () {
 const SETTINGS_KEY = "hanzifun.settings";
-const SETTINGS_VERSION = 8;
+const SETTINGS_VERSION = 9;
 const APP_TITLE = "汉字 Fun";
 const CSS_PX_PER_MM = 96 / 25.4;
 const VIEWBOX_SIZE = 1024;
@@ -19,6 +19,15 @@ const STROKE_CARD_MIN_HEIGHT_MM = 48;
 const STROKE_CARD_FIXED_WIDTH_MM = 38;
 const STROKE_CARD_PADDING_MM = 4;
 const KAI_FONT_FACE = "KaiTi";
+
+const FONT_OPTIONS = {
+  kaiti: { label: "楷体", stack: '"Kaiti SC", STKaiti, KaiTi, "AR PL UKai CN", "Noto Serif CJK SC", serif' },
+  songti: { label: "宋体", stack: '"Songti SC", STSong, SimSun, "Noto Serif CJK SC", serif' },
+  heiti: { label: "黑体", stack: '"Heiti SC", STHeiti, "Microsoft YaHei", "Noto Sans CJK SC", sans-serif' },
+  fangsong: { label: "仿宋", stack: '"FangSong", STFangsong, "FangSong_GB2312", serif' },
+};
+
+const FONT_LABELS = Object.fromEntries(Object.entries(FONT_OPTIONS).map(([k, v]) => [k, v.label]));
 
 const PAPER_SIZES = {
   A5: [148, 210],
@@ -65,6 +74,7 @@ const DEFAULT_SETTINGS = {
   gridCrossColor: "#c9d2d8",
   gridDiagonalColor: "#d8c6c6",
   zoom: 70,
+  fontFamily: "kaiti",
 };
 
 const NUMBER_FIELDS = new Set([
@@ -213,6 +223,9 @@ function loadSettings() {
       if (Number(stored.settingsVersion) < 8 && !migrated.traceColor) {
         migrated.traceColor = DEFAULT_SETTINGS.traceColor;
         migrated.traceOpacity = DEFAULT_SETTINGS.traceOpacity;
+      }
+      if (Number(stored.settingsVersion) < 9) {
+        migrated.fontFamily = DEFAULT_SETTINGS.fontFamily;
       }
       return { ...DEFAULT_SETTINGS, ...migrated, settingsVersion: SETTINGS_VERSION };
     }
@@ -520,9 +533,18 @@ function footerFields(pageIndex, pageCount) {
   return `<footer class="page-footer footer-${alignment}">${pageIndex + 1} / ${pageCount}</footer>`;
 }
 
+function resolvedKaiFont() {
+  const option = FONT_OPTIONS[settings.fontFamily];
+  return option ? option.stack : FONT_OPTIONS.kaiti.stack;
+}
+
+function fontLabel() {
+  return FONT_LABELS[settings.fontFamily] || FONT_LABELS.kaiti;
+}
+
 function makePage(body, pageIndex, pageCount, dimensions, extraClass = "") {
   return `<div class="page-shell" style="--paper-width:${dimensions.width}mm;--paper-height:${dimensions.height}mm">
-    <section class="page ${extraClass}" style="--paper-width:${dimensions.width}mm;--paper-height:${dimensions.height}mm;--page-margin:${settings.marginMm}mm;--grid-frame-color:${settingColor("gridFrameColor")};--grid-cross-color:${settingColor("gridCrossColor")};--grid-diagonal-color:${settingColor("gridDiagonalColor")};--trace-color:${settingColor("traceColor")};--stroke-active:${settingColor("strokeActiveColor")};--guide-color:${settingColor("guideColor")}">
+    <section class="page ${extraClass}" style="--paper-width:${dimensions.width}mm;--paper-height:${dimensions.height}mm;--page-margin:${settings.marginMm}mm;--kai-font:${resolvedKaiFont()};--grid-frame-color:${settingColor("gridFrameColor")};--grid-cross-color:${settingColor("gridCrossColor")};--grid-diagonal-color:${settingColor("gridDiagonalColor")};--trace-color:${settingColor("traceColor")};--stroke-active:${settingColor("strokeActiveColor")};--guide-color:${settingColor("guideColor")}">
       ${headerFields()}${body}${footerFields(pageIndex, pageCount)}
     </section>
   </div>`;
@@ -1094,7 +1116,7 @@ function render() {
   els.pages.setAttribute("aria-busy", dataState === "loading" ? "true" : "false");
   els.printBtn.disabled = dataState !== "ready" || pdfOperationActive;
   const compactSuffix = dataState === "loading" ? " · 笔顺加载中…" : dataState === "error" ? " · 笔顺加载失败" : "";
-  els.compactStatus.textContent = `${settings.paperSize} · ${settings.orientation === "portrait" ? "纵向" : "横向"} · ${GRID_STYLE_LABELS[gridStyle()]} · ${TEMPLATE_LABELS[settings.template]}${compactSuffix}`;
+  els.compactStatus.textContent = `${settings.paperSize} · ${settings.orientation === "portrait" ? "纵向" : "横向"} · ${GRID_STYLE_LABELS[gridStyle()]} · ${TEMPLATE_LABELS[settings.template]} · ${fontLabel()}${compactSuffix}`;
   document.title = dataState === "loading"
     ? `${APP_TITLE}（笔顺加载中…）`
     : dataState === "error" ? `${APP_TITLE}（笔顺加载失败）` : APP_TITLE;
