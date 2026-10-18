@@ -1235,7 +1235,14 @@ function readControl(control) {
 
 function syncSettingFromControl(control) {
   if (control.type === "radio" && !control.checked) return;
-  settings[control.dataset.setting] = readControl(control);
+  const key = control.dataset.setting;
+  const value = readControl(control);
+  settings[key] = value;
+  // 切换字体时主动预加载，避免打印时字体还没下载完
+  if (key === "fontFamily" && typeof document !== "undefined" && document.fonts) {
+    const webfont = (PDF_FONTS[value] || PDF_FONTS.kaiti).webfont;
+    document.fonts.load(`16px "${webfont}"`).catch(() => {});
+  }
   scheduleRender();
 }
 
@@ -1911,7 +1918,7 @@ async function savePdfForManualPrint() {
   }
 }
 
-function printWorksheet() {
+async function printWorksheet() {
   if (shouldUsePdfPrintFallback()) {
     els.printNote.textContent = "移动端浏览器通常不支持直接唤起系统打印，已改为生成 PDF 后打印。";
     els.printNote.hidden = false;
@@ -1919,6 +1926,14 @@ function printWorksheet() {
     savePdfForManualPrint();
     return;
   }
+
+  // 等待网页字体加载完成再打印，避免字体没下载完就用了 fallback
+  try {
+    await Promise.race([
+      document.fonts.ready,
+      new Promise((resolve) => setTimeout(resolve, 5000)),
+    ]);
+  } catch (e) { /* 忽略字体等待失败，直接打印 */ }
 
   // Detect if window.print() actually works — some mobile browsers (e.g. Xiaomi)
   // silently ignore it without opening any print dialog.
