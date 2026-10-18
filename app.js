@@ -1292,7 +1292,7 @@ function beginPdfOperation(button) {
   if (pdfOperationActive || button.disabled) return null;
   const originalLabel = button.textContent;
   pdfOperationActive = true;
-  els.exportPdfBtn.disabled = true;
+  if (els.exportPdfBtn) els.exportPdfBtn.disabled = true;
   els.printBtn.disabled = true;
   button.setAttribute("aria-busy", "true");
   activePdfProgress = (message) => { button.textContent = message; };
@@ -1303,7 +1303,7 @@ function beginPdfOperation(button) {
     pdfOperationActive = false;
     button.removeAttribute("aria-busy");
     button.textContent = originalLabel;
-    els.exportPdfBtn.disabled = false;
+    if (els.exportPdfBtn) els.exportPdfBtn.disabled = false;
     els.printBtn.disabled = els.dataStatus.dataset.state !== "ready";
   };
 }
@@ -2083,7 +2083,7 @@ function init() {
     applySettingsToControls();
     scheduleRender();
   });
-  els.exportPdfBtn.addEventListener("click", exportPdf);
+  if (els.exportPdfBtn) els.exportPdfBtn.addEventListener("click", exportPdf);
   els.printBtn.addEventListener("click", printWorksheet);
   els.pages.addEventListener("click", (event) => {
     if (settings.template !== "stroke") return;
