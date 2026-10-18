@@ -20,11 +20,22 @@ const STROKE_CARD_FIXED_WIDTH_MM = 38;
 const STROKE_CARD_PADDING_MM = 4;
 const KAI_FONT_FACE = "KaiTi";
 
+// PDF 导出用字体注册表：每种字体风格对应内嵌字体文件、jsPDF 字体名、字符集文件、网页字体名。
+// 预览/打印/导出三端统一用同一字体文件，保证所见即所得。
+const PDF_FONTS = {
+  kaiti: { file: "vendor/fonts/kai.ttf", face: "KaiTi", charsFile: "vendor/fonts/kai-chars.json", webfont: "HanZiKai" },
+  songti: { file: "vendor/fonts/song.ttf", face: "HanZiSong", charsFile: "vendor/fonts/song-chars.json", webfont: "HanZiSong" },
+  heiti: { file: "vendor/fonts/hei.ttf", face: "HanZiHei", charsFile: "vendor/fonts/hei-chars.json", webfont: "HanZiHei" },
+  fangsong: { file: "vendor/fonts/fangsong.ttf", face: "HanZiFangSong", charsFile: "vendor/fonts/fangsong-chars.json", webfont: "HanZiFangSong" },
+};
+// 当前 PDF 导出使用的字体名（preparePdfFont 设置，供渲染期 pdf.setFont 使用）
+let currentPdfFontFace = KAI_FONT_FACE;
+
 const FONT_OPTIONS = {
-  kaiti: { label: "楷体", stack: "'Kaiti SC', STKaiti, KaiTi, 'AR PL UKai CN', 'Noto Serif CJK SC', serif" },
-  songti: { label: "宋体", stack: "'Songti SC', STSong, SimSun, 'Noto Serif CJK SC', serif" },
-  heiti: { label: "黑体", stack: "'Heiti SC', STHeiti, 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif" },
-  fangsong: { label: "仿宋", stack: "'FangSong', STFangsong, 'FangSong_GB2312', serif" },
+  kaiti: { label: "楷体", stack: "'HanZiKai', 'Kaiti SC', STKaiti, KaiTi, 'AR PL UKai CN', 'Noto Serif CJK SC', serif" },
+  songti: { label: "宋体", stack: "'HanZiSong', 'Songti SC', STSong, SimSun, 'Noto Serif CJK SC', serif" },
+  heiti: { label: "黑体", stack: "'HanZiHei', 'Heiti SC', STHeiti, 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif" },
+  fangsong: { label: "仿宋", stack: "'HanZiFangSong', 'FangSong', STFangsong, 'FangSong_GB2312', serif" },
 };
 
 const FONT_LABELS = Object.fromEntries(Object.entries(FONT_OPTIONS).map(([k, v]) => [k, v.label]));
@@ -164,11 +175,13 @@ function connectionAllowsBackgroundWork() {
 }
 
 function pdfRuntimeUrls() {
+  const fontKey = settings.fontFamily in PDF_FONTS ? settings.fontFamily : "kaiti";
+  const spec = PDF_FONTS[fontKey];
   return [
     "vendor/jspdf.umd.min.js",
     CDN_BASE ? `${CDN_BASE}/vendor/hb-subset.wasm` : "vendor/hb-subset.wasm",
-    CDN_BASE ? `${CDN_BASE}/vendor/fonts/kai.ttf` : "vendor/fonts/kai.ttf",
-    CDN_BASE ? `${CDN_BASE}/vendor/fonts/kai-chars.json` : "vendor/fonts/kai-chars.json",
+    CDN_BASE ? `${CDN_BASE}/${spec.file}` : spec.file,
+    CDN_BASE ? `${CDN_BASE}/${spec.charsFile}` : spec.charsFile,
   ];
 }
 
@@ -267,8 +280,8 @@ function extractPageCharacters() {
     .map((svg) => svg.dataset.ch)
     .filter(Boolean);
   const textChars = extractCharacters(els.pages.textContent || "", true);
-  const fallbackChars = kaiCharSet
-    ? textChars.filter((ch) => !kaiCharSet.has(ch))
+  const fallbackChars = pdfFontCharSet
+    ? textChars.filter((ch) => !pdfFontCharSet.has(ch))
     : [];
   return [...new Set([...svgChars, ...fallbackChars])];
 }
@@ -737,42 +750,52 @@ function loadScript(source) {
   return promise;
 }
 
-// --- 内嵌楷体字体运行时：hb-subset 按需裁剪 + jsPDF 嵌入 ---
+// --- 内嵌字体运行时：hb-subset 按需裁剪 + jsPDF 嵌入 ---
 // 解决页眉等排版文本用 helvetica 无中文导致的乱码。
-const kaiRuntime = { wasm: null, font: null, chars: null };
-let kaiCharSet = null;
+// 按 settings.fontFamily 选择对应字体文件，保证 PDF 与预览/打印用同一字体。
+const fontRuntimeCache = {}; // fontKey -> { wasm, font, chars }
+let pdfFontCharSet = null;
 
 async function loadHbSubsetWasm() {
-  if (kaiRuntime.wasm) return kaiRuntime.wasm;
+  if (fontRuntimeCache._wasm) return fontRuntimeCache._wasm;
   const url = CDN_BASE ? `${CDN_BASE}/vendor/hb-subset.wasm` : "vendor/hb-subset.wasm";
   const res = await fetch(url);
   if (!res.ok) throw new Error("hb-subset.wasm 载入失败");
   const { instance } = await WebAssembly.instantiate(await res.arrayBuffer());
-  kaiRuntime.wasm = instance.exports;
-  return kaiRuntime.wasm;
+  fontRuntimeCache._wasm = instance.exports;
+  return fontRuntimeCache._wasm;
 }
 
-async function loadKaiFontBuffer() {
-  if (kaiRuntime.font) return kaiRuntime.font;
-  const url = CDN_BASE ? `${CDN_BASE}/vendor/fonts/kai.ttf` : "vendor/fonts/kai.ttf";
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("kai.ttf 载入失败");
-  kaiRuntime.font = new Uint8Array(await res.arrayBuffer());
-  return kaiRuntime.font;
+function getFontRuntime(fontKey) {
+  if (!fontRuntimeCache[fontKey]) fontRuntimeCache[fontKey] = { font: null, chars: null };
+  return fontRuntimeCache[fontKey];
 }
 
-async function loadKaiCharSet() {
-  if (kaiRuntime.chars) return kaiRuntime.chars;
-  const url = CDN_BASE ? `${CDN_BASE}/vendor/fonts/kai-chars.json` : "vendor/fonts/kai-chars.json";
+async function loadPdfFontBuffer(fontKey) {
+  const rt = getFontRuntime(fontKey);
+  if (rt.font) return rt.font;
+  const spec = PDF_FONTS[fontKey] || PDF_FONTS.kaiti;
+  const url = CDN_BASE ? `${CDN_BASE}/${spec.file}` : spec.file;
   const res = await fetch(url);
-  if (!res.ok) throw new Error("kai-chars.json 载入失败");
-  kaiRuntime.chars = new Set(JSON.parse(await res.text()));
-  return kaiRuntime.chars;
+  if (!res.ok) throw new Error(`${spec.file} 载入失败`);
+  rt.font = new Uint8Array(await res.arrayBuffer());
+  return rt.font;
+}
+
+async function loadPdfFontCharSet(fontKey) {
+  const rt = getFontRuntime(fontKey);
+  if (rt.chars) return rt.chars;
+  const spec = PDF_FONTS[fontKey] || PDF_FONTS.kaiti;
+  const url = CDN_BASE ? `${CDN_BASE}/${spec.charsFile}` : spec.charsFile;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${spec.charsFile} 载入失败`);
+  rt.chars = new Set(JSON.parse(await res.text()));
+  return rt.chars;
 }
 
 // 用 hb-subset.wasm 把字体裁剪到 text 实际用字，返回子集字体 Uint8Array。
 // 移植自 subset-font（去掉 Node fs/Buffer/fontverter），纯浏览器 WebAssembly。
-function subsetFontKai(H, fontU8, text) {
+function subsetFont(H, fontU8, text) {
   const heapu8 = new Uint8Array(H.memory.buffer);
   const input = H.hb_subset_input_create_or_fail();
   if (!input) throw new Error("hb_subset_input_create_or_fail");
@@ -832,14 +855,17 @@ function collectPdfTextChars(pages) {
   return chars;
 }
 
-// 载入楷体运行时，按页面实际用字子集化后嵌入 pdf；字符集存入 kaiCharSet 供渲染期 fallback。
-async function prepareKaiFont(pdf, pages) {
-  const [H, fontU8, charSet] = await Promise.all([loadHbSubsetWasm(), loadKaiFontBuffer(), loadKaiCharSet()]);
+// 载入所选字体风格的运行时，按页面实际用字子集化后嵌入 pdf；字符集存入 pdfFontCharSet 供渲染期 fallback。
+async function preparePdfFont(pdf, pages, fontKey) {
+  const spec = PDF_FONTS[fontKey] || PDF_FONTS.kaiti;
+  const [H, fontU8, charSet] = await Promise.all([loadHbSubsetWasm(), loadPdfFontBuffer(fontKey), loadPdfFontCharSet(fontKey)]);
   const chars = collectPdfTextChars(pages);
-  const subset = subsetFontKai(H, fontU8, [...chars].join(""));
-  pdf.addFileToVFS("kai.ttf", uint8ToBase64(subset));
-  pdf.addFont("kai.ttf", KAI_FONT_FACE, "normal");
-  kaiCharSet = charSet;
+  const subset = subsetFont(H, fontU8, [...chars].join(""));
+  const vfsName = spec.file.split("/").pop();
+  pdf.addFileToVFS(vfsName, uint8ToBase64(subset));
+  pdf.addFont(vfsName, spec.face, "normal");
+  currentPdfFontFace = spec.face;
+  pdfFontCharSet = charSet;
 }
 
 function packForChunk(chunkId) {
@@ -1054,8 +1080,9 @@ function warmPdfRuntime() {
   if (!connectionAllowsBackgroundWork()) return;
   cacheOrPrefetchUrls(pdfRuntimeUrls());
   loadHbSubsetWasm().catch(() => {});
-  loadKaiFontBuffer().catch(() => {});
-  loadKaiCharSet().catch(() => {});
+  const fontKey = settings.fontFamily in PDF_FONTS ? settings.fontFamily : "kaiti";
+  loadPdfFontBuffer(fontKey).catch(() => {});
+  loadPdfFontCharSet(fontKey).catch(() => {});
 }
 
 function updatePreviewScale(dimensions) {
@@ -1548,7 +1575,7 @@ function drawSvgElement(pdf, element, parentMatrix, box) {
     const computed = getComputedStyle(element);
     const anchor = point(element.getAttribute("x"), element.getAttribute("y"));
     setPdfColor(pdf, "setTextColor", computed.stroke === "none" ? computed.fill : computed.stroke, Number(computed.opacity) || 1);
-    pdf.setFont(KAI_FONT_FACE, "normal");
+    pdf.setFont(currentPdfFontFace, "normal");
     pdf.setFontSize(parseFloat(computed.fontSize) * box.width / VIEWBOX_SIZE * 72 / 25.4);
     pdf.text(element.textContent, anchor.x, anchor.y, { align: computed.textAnchor === "middle" ? "center" : "left", baseline: "middle" });
   }
@@ -1722,7 +1749,7 @@ function drawPdfText(pdf, character, box, computed) {
   const marks = Array.from(decomposed).filter((part) => /\p{Mark}/u.test(part));
   const baseline = box.y + (box.height - fontSize) / 2 + fontSize * 0.8;
   setPdfColor(pdf, "setTextColor", computed.color, computed.opacity);
-  pdf.setFont(KAI_FONT_FACE, "normal");
+  pdf.setFont(currentPdfFontFace, "normal");
   pdf.setFontSize(parseFloat(computed.fontSize) * 0.75);
   pdf.text(base, box.x, baseline);
   for (const mark of marks) drawToneMark(pdf, mark, box, computed.color, Math.max(0.12, fontSize * 0.07));
@@ -1748,7 +1775,7 @@ function drawHtmlText(pdf, page, metrics) {
           const box = relativeRect(rect, metrics);
           const fontSize = parseFloat(computed.fontSize) / CSS_PX_PER_MM;
           const glyphBox = { x: box.x, y: box.y + (box.height - fontSize) / 2, width: box.width, height: fontSize };
-          if (/[\u3400-\u9fff]/u.test(character) && kaiCharSet && !kaiCharSet.has(character) && drawHanziForm(pdf, character, glyphBox, computed.color, computed.opacity)) {
+          if (/[\u3400-\u9fff]/u.test(character) && pdfFontCharSet && !pdfFontCharSet.has(character) && drawHanziForm(pdf, character, glyphBox, computed.color, computed.opacity)) {
             // \u751f\u50fb\u5b57\uff08\u8d85\u51fa\u5185\u5d4c\u6977\u4f53\u8986\u76d6\uff09\u4e14\u6709\u7b14\u987a\u6570\u636e\uff1a\u7528\u7b14\u987a\u8f6e\u5ed3 fallback\uff0c\u907f\u514d\u7f3a\u5b57\u7a7a\u767d
           } else {
             drawPdfText(pdf, character, box, computed);
@@ -1762,7 +1789,8 @@ function drawHtmlText(pdf, page, metrics) {
 }
 
 async function buildPdfDocument() {
-  await loadKaiCharSet();
+  const fontKey = settings.fontFamily in PDF_FONTS ? settings.fontFamily : "kaiti";
+  await loadPdfFontCharSet(fontKey);
   await preparePdfPages();
   reportPdfProgress("载入 PDF 组件…");
   await nextPaint();
@@ -1778,7 +1806,7 @@ async function buildPdfDocument() {
     compress: true,
   });
   const pages = [...els.pages.querySelectorAll(".page")];
-  await prepareKaiFont(pdf, pages);
+  await preparePdfFont(pdf, pages, fontKey);
 
   gridFormCache.clear();
   glyphFormCache.clear();

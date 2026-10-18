@@ -81,6 +81,12 @@ const vendorFiles = [
   "zip.LICENSE",
   "fonts/kai.ttf",
   "fonts/kai-chars.json",
+  "fonts/song.ttf",
+  "fonts/song-chars.json",
+  "fonts/hei.ttf",
+  "fonts/hei-chars.json",
+  "fonts/fangsong.ttf",
+  "fonts/fangsong-chars.json",
 ];
 for (const file of vendorFiles) {
   const target = path.join(output, "vendor", file);

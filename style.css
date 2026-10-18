@@ -1,3 +1,36 @@
+/* 内嵌字体：与 PDF 导出嵌入的是同一字体文件，保证预览、打印、PDF 三端字形一致 */
+@font-face {
+  font-family: "HanZiKai";
+  src: url("vendor/fonts/kai.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+/* 宋体：站酷小薇（OFL） */
+@font-face {
+  font-family: "HanZiSong";
+  src: url("vendor/fonts/song.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+/* 黑体：站酷庆科黄油体（OFL） */
+@font-face {
+  font-family: "HanZiHei";
+  src: url("vendor/fonts/hei.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+/* 仿宋：朱雀仿宋（OFL） */
+@font-face {
+  font-family: "HanZiFangSong";
+  src: url("vendor/fonts/fangsong.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
   --ink: #18232b;

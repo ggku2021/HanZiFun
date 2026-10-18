@@ -1,0 +1,18 @@
+This directory contains the following open-licensed Chinese fonts,
+all under the SIL Open Font License 1.1 (OFL):
+
+- song.ttf: ZCOOL XiaoWei (站酷小薇), by ZCOOL
+  Source: https://github.com/google/fonts (ofl/zcoolxiaowei)
+  Used for the "宋体" (Songti) style.
+
+- hei.ttf: ZCOOL QingKe HuangYou (站酷庆科黄油体), by ZCOOL
+  Source: https://github.com/google/fonts (ofl/zcoolqingkehuangyou)
+  Used for the "黑体" (Heiti) style.
+
+- fangsong.ttf: Zhuque Fangsong (朱雀仿宋), by TrionesType
+  Source: https://github.com/TrionesType/zhuque (v0.212)
+  Used for the "仿宋" (Fangsong) style.
+
+All three are licensed under the SIL Open Font License, Version 1.1,
+which permits embedding (including in PDFs), redistribution, and
+modification. See https://openfontlicense.org for the full license text.

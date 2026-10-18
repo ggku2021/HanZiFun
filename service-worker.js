@@ -19,7 +19,13 @@ const PDF_RUNTIME = [
   "./vendor/jspdf.umd.min.js",
   "./vendor/hb-subset.wasm",
   "./vendor/fonts/kai.ttf",
-  "./vendor/fonts/kai-chars.json"
+  "./vendor/fonts/kai-chars.json",
+  "./vendor/fonts/song.ttf",
+  "./vendor/fonts/song-chars.json",
+  "./vendor/fonts/hei.ttf",
+  "./vendor/fonts/hei-chars.json",
+  "./vendor/fonts/fangsong.ttf",
+  "./vendor/fonts/fangsong-chars.json"
 ];
 
 function isContentHashedStrokePack(url) {
