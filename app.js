@@ -1751,7 +1751,7 @@ function drawPdfText(pdf, character, box, computed) {
   setPdfColor(pdf, "setTextColor", computed.color, computed.opacity);
   pdf.setFont(currentPdfFontFace, "normal");
   pdf.setFontSize(parseFloat(computed.fontSize) * 0.75);
-  pdf.text(base, box.x, baseline);
+  pdf.text(base, box.x + box.width / 2, baseline, { align: "center" });
   for (const mark of marks) drawToneMark(pdf, mark, box, computed.color, Math.max(0.12, fontSize * 0.07));
 }
 
