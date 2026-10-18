@@ -771,12 +771,23 @@ function getFontRuntime(fontKey) {
   return fontRuntimeCache[fontKey];
 }
 
+async function fetchWithCdnFallback(cdnUrl, originUrl) {
+  if (cdnUrl) {
+    try {
+      const res = await fetch(cdnUrl);
+      if (res.ok) return res;
+    } catch (e) { /* fall through to origin */ }
+  }
+  const res = await fetch(originUrl);
+  return res;
+}
+
 async function loadPdfFontBuffer(fontKey) {
   const rt = getFontRuntime(fontKey);
   if (rt.font) return rt.font;
   const spec = PDF_FONTS[fontKey] || PDF_FONTS.kaiti;
-  const url = CDN_BASE ? `${CDN_BASE}/${spec.file}` : spec.file;
-  const res = await fetch(url);
+  const cdnUrl = CDN_BASE ? `${CDN_BASE}/${spec.file}` : null;
+  const res = await fetchWithCdnFallback(cdnUrl, spec.file);
   if (!res.ok) throw new Error(`${spec.file} 载入失败`);
   rt.font = new Uint8Array(await res.arrayBuffer());
   return rt.font;
@@ -786,8 +797,8 @@ async function loadPdfFontCharSet(fontKey) {
   const rt = getFontRuntime(fontKey);
   if (rt.chars) return rt.chars;
   const spec = PDF_FONTS[fontKey] || PDF_FONTS.kaiti;
-  const url = CDN_BASE ? `${CDN_BASE}/${spec.charsFile}` : spec.charsFile;
-  const res = await fetch(url);
+  const cdnUrl = CDN_BASE ? `${CDN_BASE}/${spec.charsFile}` : null;
+  const res = await fetchWithCdnFallback(cdnUrl, spec.charsFile);
   if (!res.ok) throw new Error(`${spec.charsFile} 载入失败`);
   rt.chars = new Set(JSON.parse(await res.text()));
   return rt.chars;
