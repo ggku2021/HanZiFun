@@ -36,7 +36,7 @@ for (const file of (await readdir(path.join(root, "data"))).filter((file) => /^s
   fingerprint.update(await readFile(path.join(root, "data", file)));
 }
 const version = `v${packageVersion}-${gitCommit}-${fingerprint.digest("hex").slice(0, 10)}`;
-const cdnBase = "https://cdn.jsdelivr.net/gh/rickytan/HanZiFun@main";
+const cdnBase = "https://cdn.jsdelivr.net/gh/ggku2021/HanZiFun@main";
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
